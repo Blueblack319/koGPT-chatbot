@@ -8,40 +8,17 @@ import random
 import re
 import torch
 from urllib import request
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset, DataLoader
 from transformers import PreTrainedTokenizerFast
-import os.path
+import os
 
-if not os.path.isfile("ChatBotData.csv"):
+curr_path = os.getcwd()
+
+if not os.path.isfile(curr_path + "/chatbot_data/ChatBotData.csv"):
     request.urlretrieve(
         "https://raw.githubusercontent.com/songys/Chatbot_data/master/ChatbotData.csv",
-        filename="chatbot_data/ChatBotData.csv",
+        filename=curr_path + "/chatbot_data/ChatBotData.csv",
     )
-
-parser = argparse.ArgumentParser(description='Simsimi based on KoGPT-2')
-
-parser.add_argument('--chat',
-                    action='store_true',
-                    default=False,
-                    help='response generation on given user input')
-
-parser.add_argument('--sentiment',
-                    type=str,
-                    default='0',
-                    help='sentiment for system. 0 is neutral, 1 is negative, 2 is positive.')
-
-parser.add_argument('--model_params',
-                    type=str,
-                    default='model_chp/model_-last.ckpt',
-                    help='model binary for starting chat')
-
-parser.add_argument('--train',
-                    action='store_true',
-                    default=False,
-                    help='for training')
-
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
 
 Q_TKN = "<usr>"
 A_TKN = "<sys>"
@@ -89,8 +66,10 @@ class ChatbotDataset(Dataset):
                 q_toked = q_toked[-(int(self.max_len / 2)) :]   #질문길이를 최대길이의 반으로 => 앞에 정보 일부 소실
                 q_len = len(q_toked)
                 a_len = self.max_len - q_len              #답변의 길이를 최대길이 - 질문길이
+                assert a_len > 0
             a_toked = a_toked[:a_len]
             a_len = len(a_toked)
+            assert a_len == len(a_toked), f'{a_len} ==? {len(a_toked)}'
 
         # 답변 labels = [mask, mask, ...., mask, ..., <bos>,..답변.. <eos>, <pad>....] => Q. <bos>를 빼지 않았나? A. a_token으로 대체
         labels = [self.mask,] * q_len + a_toked[1:]
@@ -117,7 +96,6 @@ class ChatbotDataset(Dataset):
         while len(token_ids) < self.max_len:
             token_ids += [self.tokenizer.pad_token_id]
 
-        breakpoint()
         #질문+답변, 마스크, 답변
         return (token_ids, np.array(mask), labels_ids)
 
@@ -128,13 +106,14 @@ def collate_batch(batch):
     return torch.LongTensor(data), torch.LongTensor(mask), torch.LongTensor(label)
 
 
-#윈도우 환경에서 num_workers 는 무조건 0으로 지정, 리눅스에서는 2
-train_dataloader = DataLoader(train_set, batch_size=32, num_workers=0, shuffle=True, collate_fn=collate_batch,)
+if __name__ == '__main__':
+    #윈도우 환경에서 num_workers 는 무조건 0으로 지정, 리눅스에서는 2
+    train_dataloader = DataLoader(self.train_set, batch_size=32, num_workers=0, shuffle=True, collate_fn=collate_batch,)
 
-print("start")
-for batch_idx, samples in enumerate(train_dataloader):
-    token_ids, mask, label = samples
-    print("token_ids ====> ", token_ids)
-    print("mask =====> ", mask)
-    print("label =====> ", label)
-print("end")
+    print("start")
+    for batch_idx, samples in enumerate(train_dataloader):
+        token_ids, mask, label = samples
+        print("token_ids ====> ", token_ids)
+        print("mask =====> ", mask)
+        print("label =====> ", label)
+    print("end")

@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=3 python ./src/model.py --gpus 1 --chat --sentiment 1 --model_params ./checkpoint/last-v1.ckpt
